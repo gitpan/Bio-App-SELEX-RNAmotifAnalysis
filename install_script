@@ -1,0 +1,45 @@
+#!/bin/bash
+
+BASHRC_APPEND_FILE=194
+PERL_DISTRIBUTION_GZ=199
+
+# Set up a local perl
+# Go to home directory
+cd ~
+
+# Make a perl5 directory, if it doesn't already exist
+mkdir -p perl5
+
+# Get the script for updating PERL5LIB
+curl -LOk http://ircf.rnet.missouri.edu:8000/share.attachment/$BASHRC_APPEND_FILE 
+
+# Get the installation package for Bio::App::SELEX::RNAmotifAnalysis
+curl -LOk http://ircf.rnet.missouri.edu:8000/share.attachment/$PERL_DISTRIBUTION_GZ 
+
+# Get the Perl module installer and make it executable
+curl -LOk http://xrl.us/cpanm
+chmod u+x cpanm
+
+# Update PERL5LIB to point to local directory, if not already done
+
+#    WARNING: This script assumes that "~" is equivalent to "/home/$LOGNAME"
+#    and that the unique version number in the append file is not otherwise
+#    found in your .bashrc file
+
+if ! cat ~/.bashrc | egrep -q "20120822162151"; then
+
+    # Append PERL5LIB setting information
+    cat $BASHRC_APPEND_FILE >> ~/.bashrc
+
+    # Go ahead and apply the update
+    source ~/.bashrc
+fi
+
+./cpanm -l perl5 Module::Build
+
+./cpanm -l perl5 $PERL_DISTRIBUTION_GZ
+
+# Remove temporary installation files
+rm $BASHRC_APPEND_FILE
+rm $PERL_DISTRIBUTION_GZ
+rm cpanm 
