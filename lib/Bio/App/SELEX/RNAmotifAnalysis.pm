@@ -773,7 +773,10 @@ END
 
 =head1 INCOMPATIBILITIES
 
-    None known
+    Windows:     lacks necessary *nix utilities
+    SGI:         problems with compiled dependency Text::LevenshteinXS
+    Sun/Solaris: problems with compiled dependency Text::LevenshteinXS
+    BSD:         problems with compiled dependency Text::LevenshteinXS
 
 =head1 BUGS AND LIMITATIONS
 

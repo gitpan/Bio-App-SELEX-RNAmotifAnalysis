@@ -203,7 +203,10 @@ INSTALLATION
         during the installation process using one of these two methods.
 
 INCOMPATIBILITIES
-        None known
+        Windows:     lacks necessary *nix utilities
+        SGI:         problems with compiled dependency Text::LevenshteinXS
+        Sun/Solaris: problems with compiled dependency Text::LevenshteinXS
+        BSD:         problems with compiled dependency Text::LevenshteinXS
 
 BUGS AND LIMITATIONS
          There are no known bugs in this module.

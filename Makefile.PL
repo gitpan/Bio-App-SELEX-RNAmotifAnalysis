@@ -22,9 +22,9 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Bio-App-SELEX-RNAmotifAnalysis",
   "EXE_FILES" => [
+    "bin/RNAmotifAnalysis",
     "bin/selex_covarianceSearch",
     "bin/selex_adapter_trimmer",
-    "bin/RNAmotifAnalysis",
     "bin/selex_clustal2stockholm.pl",
     "bin/selex_stock2fasta.pl"
   ],
@@ -34,10 +34,10 @@ my %WriteMakefileArgs = (
     "Config::Tiny" => 0,
     "Getopt::Long::Descriptive" => 0,
     "List::MoreUtils" => 0,
-    "Text::LevenshteinXS" => 0,
+    "Text::LevenshteinXS" => "0.03",
     "autodie" => "2.0"
   },
-  "VERSION" => "0.0084",
+  "VERSION" => "0.0085",
   "test" => {
     "TESTS" => "t/*.t"
   }
