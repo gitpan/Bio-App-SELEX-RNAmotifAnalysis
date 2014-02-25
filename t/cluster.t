@@ -163,7 +163,7 @@ sub expected_odd_as_seed_cluster {
 
     Bio::App::SELEX::RNAmotifAnalysis::write_out_clusters(
         cluster_href => $cluster_href,
-        fh_all       => $fh_all,
+        fh_all_clusters       => $fh_all,
         fh_href      => $fh_href,
         max_top_seqs => 1000
     );
@@ -201,37 +201,29 @@ sub expected_odd_as_seed_cluster {
 
     Bio::App::SELEX::RNAmotifAnalysis::write_out_clusters(
         cluster_href => $cluster_href,
-        fh_all       => $fh_all,
+        fh_all_clusters       => $fh_all,
         fh_href      => $fh_href,
         max_top_seqs => 2
     );
 
     for my $cluster ( 1 .. 2 ) {
-        my $expected_fasta_top = string_from("fasta_top_cluster_$cluster");
-        my $expected_fasta_overage =
-          string_from("fasta_overage_cluster_$cluster");
-        my $overage_file_name = "cluster_${cluster}_overage.fasta";
-        my $result_overage    = slurp $overage_file_name;
+        my $expected_fasta_top     = string_from("fasta_top_cluster_$cluster");
+        my $expected_fasta_overage = string_from("fasta_overage_cluster_$cluster");
 
-        is( $string_for{$cluster}, $expected_fasta_top, 'top seqs works' );
-        is( $result_overage, $expected_fasta_overage,
-            'overage fasta file correct' );
+        my $overage_file_name      = "cluster_${cluster}_overage.fasta";
+        my $result_overage         = slurp $overage_file_name;
+
+        is( $string_for{$cluster}, $expected_fasta_top,     'top seqs works' );
+        is( $result_overage,       $expected_fasta_overage, 'overage fasta file correct' );
         delete_temp_file($overage_file_name);
     }
 }
 
 {    # Test
-    my $all_cluster_string;
-    open( my $fh_all, '>', \$all_cluster_string );
-
-    my $cluster1_string;
-    open( my $fh1, '>', \$cluster1_string );
-
-    my $cluster2_string;
-    open( my $fh2, '>', \$cluster2_string );
-
-    my $cluster3_string;
-    open( my $fh3, '>', \$cluster3_string );
+    open( my $fh_all, '>', \my $all_cluster_string );
+    open( my $fh1,    '>', \my $cluster1_string );
+    open( my $fh2,    '>', \my $cluster2_string );
+    open( my $fh3,    '>', \my $cluster3_string );
 
     my $cluster_href = sample_cluster();
     my $fh_href      = {
@@ -242,7 +234,7 @@ sub expected_odd_as_seed_cluster {
 
     Bio::App::SELEX::RNAmotifAnalysis::write_out_clusters(
         cluster_href => $cluster_href,
-        fh_all       => $fh_all,
+        fh_all_clusters       => $fh_all,
         fh_href      => $fh_href,
         max_top_seqs => 1000
     );

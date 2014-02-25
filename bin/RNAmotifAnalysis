@@ -87,10 +87,10 @@ sub main {
         file_type    => $file_type,
     );
 
-    open( my $fh_all, '>', 'clusters.txt' );
+    open( my $fh_all_clusters, '>', 'clusters.txt' );
     write_out_clusters(
         cluster_href => $cluster_href,
-        fh_all       => $fh_all,
+        fh_all_clusters       => $fh_all_clusters,
         max_top_seqs => $max_top_seqs,
     );
     create_batch_files( $config, $num_cpus, $run_scripts );
@@ -333,7 +333,7 @@ sub total_plus_cluster {
 sub write_out_clusters {
     my %opt          = @_;
     my $cluster_href = $opt{cluster_href} || croak 'cluster_href required';
-    my $fh_all       = $opt{fh_all}       || croak 'fh_all required';
+    my $fh_all_clusters       = $opt{fh_all_clusters}       || croak 'fh_all_clusters required';
     my $fh_href      = $opt{fh_href}      || {};
     my $max_top_seqs = $opt{max_top_seqs} || croak 'max_top_seqs required';
 
@@ -353,7 +353,7 @@ sub write_out_clusters {
         my $grouping = @{ $count} == 2 ? 'single' : 'cluster';
 
         # Print header for each cluster/single
-        print {$fh_all} "####### $grouping $id ########\n";
+        print {$fh_all_clusters} "####### $grouping $id ########\n";
 
         # Use prescribed filehandle for each sequence, or create one
         my $fh;
@@ -367,7 +367,7 @@ sub write_out_clusters {
         }
 
         # Write cluster info to the "all" and individual cluster files
-        write_cluster( [ $fh_all, $fh ], $count, $id, $max_top_seqs );
+        write_cluster( [ $fh_all_clusters, $fh ], $count, $id, $max_top_seqs );
 
         # Increment cluster id
         $id++;
@@ -376,7 +376,7 @@ sub write_out_clusters {
 }
 
 sub write_cluster {
-    my ( $fh_all, @fhs ) = @{ shift() };
+    my ( $fh_all_clusters, @fhs ) = @{ shift() };
     my $cluster_aref   = shift;
     my $cluster_number = shift;
     my $max_top_seqs   = shift;
@@ -407,7 +407,7 @@ sub write_cluster {
         my $unique_id = join( '.', $cluster_number, $internal_seq_id, $count );
 
         # Print to individual cluster file and all clusters file
-        print {$fh_all} $unique_id . $SPACE x 10 . $seq . "\n";
+        print {$fh_all_clusters} $unique_id . $SPACE x 10 . $seq . "\n";
 
       PRINT_LOOP:
         for my $fh (@fhs) {
@@ -431,11 +431,9 @@ sub write_cluster {
         open( my $overage_fh, '>', $filename );
         for my $seq_w_count (@overage_seqs) {
             my ( $seq, $count ) = @{$seq_w_count};
-            my $unique_id =
-              join( '.', $cluster_number, $internal_seq_id, $count );
-            for my $fh ( $overage_fh, $fh_all ) {
-                print {$fh} ">$unique_id\n$seq\n";
-            }
+            my $unique_id = join( '.', $cluster_number, $internal_seq_id, $count );
+            print {$overage_fh} ">$unique_id\n$seq\n";
+            print {$fh_all_clusters} "$unique_id\t$seq\n";
             $internal_seq_id++;
         }
     }
@@ -786,6 +784,6 @@ END
 
 =head1 RELATED PUBLICATIONS
 
-    Ditzler et. al. Manuscript currently in review.
+    Ditzler MA, Lange MJ, Bose D, Bottoms CA, Virkler KF, et al. (2013) High-throughput sequence analysis reveals structural diversity and improved potency among RNA inhibitors of HIV reverse transcriptase. Nucleic Acids Res 41: 1873–1884. doi: 10.1093/nar/gks1190
 
 =cut
