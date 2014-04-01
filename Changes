@@ -1,3 +1,8 @@
+0.0091 Updated Changes file
+
+0.0090 New Feature: Sequence identifier now has edit distance from cluster reference sequence included as a fourth number in the identifier (e.g. for the identifier 2.3.1.5, the corresponding sequence has an edit distance of 5 from the reference sequence). 
+    Bug Fixes: Fixed bug that would prevent sequences from being added to a cluster after the maximum number of clusters had been found.  Removed spurious dependency on Getopt::Long::Descriptive
+
 0.0089 Fixed formatting of publication reference
 
 0.0088 Fixed bug in output of cluster file (clusters.txt)
