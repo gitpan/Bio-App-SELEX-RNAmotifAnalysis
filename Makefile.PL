@@ -18,17 +18,16 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "Bio-App-SELEX-RNAmotifAnalysis",
   "EXE_FILES" => [
-    "bin/RNAmotifAnalysis",
-    "bin/selex_covarianceSearch",
-    "bin/selex_adapter_trimmer",
     "bin/selex_clustal2stockholm.pl",
-    "bin/selex_stock2fasta.pl"
+    "bin/selex_adapter_trimmer",
+    "bin/RNAmotifAnalysis",
+    "bin/selex_stock2fasta.pl",
+    "bin/selex_covarianceSearch"
   ],
   "LICENSE" => "perl",
   "NAME" => "Bio::App::SELEX::RNAmotifAnalysis",
   "PREREQ_PM" => {
     "Config::Tiny" => 0,
-    "Getopt::Long::Descriptive" => 0,
     "List::MoreUtils" => 0,
     "Text::LevenshteinXS" => "0.03",
     "autodie" => "2.0"
@@ -39,7 +38,7 @@ my %WriteMakefileArgs = (
     "Test::LongString" => 0,
     "Test::More" => "0.96"
   },
-  "VERSION" => "0.0088",
+  "VERSION" => "0.0090",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -50,7 +49,6 @@ my %FallbackPrereqs = (
   "Config::Tiny" => 0,
   "Data::Section" => 0,
   "File::Slurp" => 0,
-  "Getopt::Long::Descriptive" => 0,
   "List::MoreUtils" => 0,
   "Test::LongString" => 0,
   "Test::More" => "0.96",

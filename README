@@ -41,6 +41,13 @@ EXAMPLE USE
         files. The batch script used to process each batch will be located in the
         respective batch directory.  To produce the scripts without running them,
         simply exclude the --run flag from the command line.
+    
+        The output file contains names that contain four period delimited values
+          For example, 2.3.1.5 means
+              that this is the second cluster
+              this is the third sequence in the cluster
+              there is one copy of this sequences
+              it is an edit distance of 5 from the reference sequence
 
 CONFIGURATION AND ENVIRONMENT
 
@@ -222,5 +229,8 @@ BUGS AND LIMITATIONS
 
 RELATED PUBLICATIONS
 
-        Ditzler MA, Lange MJ, Bose D, Bottoms CA, Virkler KF, et al. (2013) High-throughput sequence analysis reveals structural diversity and improved potency among RNA inhibitors of HIV reverse transcriptase. Nucleic Acids Res 41: 1873–1884. doi: 10.1093/nar/gks1190
+        Ditzler MA, Lange MJ, Bose D, Bottoms CA, Virkler KF, et al. (2013) High-
+        throughput sequence analysis reveals structural diversity and improved
+        potency among RNA inhibitors of HIV reverse transcriptase. Nucleic Acids
+        Res 41: 1873–1884. doi: 10.1093/nar/gks1190
 

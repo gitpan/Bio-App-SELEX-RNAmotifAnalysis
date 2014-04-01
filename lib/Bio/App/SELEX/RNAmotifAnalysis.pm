@@ -79,7 +79,7 @@ sub main {
         open( $seed_fh, '<', $seed_filename );
     }
 
-    my $cluster_href = cluster(
+    my ($cluster_href, $distance_href) = cluster(
         fh           => $fh_in,
         max_distance => $max_distance,
         max_clusters => $max_clusters,
@@ -89,9 +89,10 @@ sub main {
 
     open( my $fh_all_clusters, '>', 'clusters.txt' );
     write_out_clusters(
-        cluster_href => $cluster_href,
-        fh_all_clusters       => $fh_all_clusters,
-        max_top_seqs => $max_top_seqs,
+        cluster_href    => $cluster_href,
+        distance_href   => $distance_href,
+        fh_all_clusters => $fh_all_clusters,
+        max_top_seqs    => $max_top_seqs,
     );
     create_batch_files( $config, $num_cpus, $run_scripts );
     return;
@@ -276,115 +277,162 @@ sub base_filename {
 #: PUBLIC_SUBS
 sub cluster {
     my %opt = @_;
+
+    # Required parameters
     my $max_distance        = $opt{max_distance} || croak 'max_distance required';
     my $fh                  = $opt{fh}           || croak 'fh required';
-    my $seed_fh             = $opt{seed_fh};
     my $max_clusters        = $opt{max_clusters} || croak 'max_clusters required';
     my $file_type           = $opt{file_type}    || confess 'file_type required';
-    my $seed_sequences_aref;
 
-    my %cluster_for;
-    my $next_id = 1;
-    my $seqs_aref = get_sequences_from($fh, $file_type);
-    my @seqs = @{$seqs_aref};
+    # Optional parameters
+    my $seed_fh             = $opt{seed_fh};
+
+    my @seed_pairs;
+
+    my @seq_count_pairs = get_sequences_from($fh, $file_type);
 
     # Add any seed sequences to the beginning of the sequence list
     # Oops, this also sorts and counts the sequences in the seed list.
     #   Is that a problem?
     if( defined $seed_fh){
-        $seed_sequences_aref = get_sequences_from($seed_fh, $file_type);
-        unshift @seqs, @{ $seed_sequences_aref};
+        @seed_pairs = get_sequences_from($seed_fh, $file_type);
+        unshift @seq_count_pairs, @seed_pairs;
     }
 
-    # Seed the cluster with the first sequence.
-    $cluster_for{$next_id} = [ shift @seqs ];
+    my %cluster_for;
+    my %distance_for; # Hash that keeps track of edit distances (parallel to %cluster_for)
+    my $next_id         = 1;
+
+    # Create the first cluster with the first sequence count pair.
+    my $first_pair = shift @seq_count_pairs;
+    $cluster_for{$next_id} = [ $first_pair];
+
+    # No distance from itself!
+    $distance_for{$next_id}{$first_pair->[0]} = 0;
 
     # Increment next cluster id, since it has already been used.
     $next_id++;
 
     # Add sequences to existing cluster, or create new ones up to the maximum
-    while ( my $seq = shift @seqs ) {
-        my $cluster_id = matching_cluster( $max_distance, \%cluster_for, $seq ) || $next_id++;
-        push @{ $cluster_for{$cluster_id} }, $seq;
-        last if $next_id > $max_clusters;
-    }
+    while ( my $seq_count_pair = shift @seq_count_pairs ) {
+        my ($cluster_id, $distance) = matching_cluster_and_distance( $max_distance, \%cluster_for, $seq_count_pair );
 
-    # Add any matching sequences to existing clusters
-    while ( my $seq = shift @seqs ) {
-        my $cluster_id = matching_cluster($max_distance,  \%cluster_for, $seq) || 0;
-        if( $cluster_id > 0){
-            push @{ $cluster_for{$cluster_id} }, $seq;
+        # Create new cluster, if one wasn't found 
+        if( ! defined $cluster_id){
+            $cluster_id = $next_id;
+            $distance   = 0;
+
+            # Increment counter
+            $next_id++;
+        }
+
+        # Add sequence info to the cluster, if the cluster is within the maximum requested
+        if( $cluster_id <= $max_clusters){
+            push @{ $cluster_for{$cluster_id} }, $seq_count_pair ;
+            $distance_for{$cluster_id}{$seq_count_pair->[0]} = $distance;
         }
     }
 
-    return \%cluster_for;
+    return (\%cluster_for, \%distance_for);
 }
 
 sub total_plus_cluster {
-    my $cluster     = shift;
-    my @seqs_with_count         = @{$cluster};
-    my $total_count = 0;
+    my $opt             = shift;
+    my $cluster         = $opt->{cluster};
+    my @seqs_with_count = @{$cluster};
+    my $total_count     = 0;
+
     for my $seq_with_count (@seqs_with_count) {
         $total_count += $seq_with_count->[1];
     }
-    return [$total_count, @seqs_with_count];
+
+    return {
+            total       => $total_count,
+            cluster     => \@seqs_with_count,
+            original_id => $opt->{original_id},
+        };
 }
 
 sub write_out_clusters {
-    my %opt          = @_;
-    my $cluster_href = $opt{cluster_href} || croak 'cluster_href required';
-    my $fh_all_clusters       = $opt{fh_all_clusters}       || croak 'fh_all_clusters required';
-    my $fh_href      = $opt{fh_href}      || {};
-    my $max_top_seqs = $opt{max_top_seqs} || croak 'max_top_seqs required';
+    my %opt             = @_;
+
+    # Required input
+    my $cluster_href    = $opt{cluster_href}    || croak 'cluster_href required';
+    my $distance_href   = $opt{distance_href}   || croak 'distance_href required';
+    my $fh_all_clusters = $opt{fh_all_clusters} || croak 'fh_all_clusters required';
+    my $max_top_seqs    = $opt{max_top_seqs}    || croak 'max_top_seqs required';
+
+    # Optional input
+    my $fh_href         = $opt{fh_href}         || {};
 
     # Sort clusters by number of sequences they contain (including redundant
     #   ones).
-    # This needs to be replaced by a Schwartzian transform so as not to create
-    #   this funny data structure called a 'count':
-    #     [ $total, [id, seq], [id,seq],]
-    my @counts =
-      map { total_plus_cluster( $cluster_href->{$_}) }
+    my @total_plus_clusters =
+      map { total_plus_cluster( {original_id => $_, cluster => $cluster_href->{$_}} ) }
       keys %{$cluster_href};
 
-    my $id = 1;
-    for my $count ( reverse sort { $a->[0] <=> $b->[0] } @counts ) {
+    my $new_id = 1;
+                               # Sort clusters by number of sequences they contain (including redundant ones).
+    for my $total_plus_cluster ( reverse sort { $a->{total} <=> $b->{total} } @total_plus_clusters ) { 
+
+        my $number_of_sequences_in_cluster = scalar @{ $total_plus_cluster->{cluster} };
+
+        my $grouping;
 
         # Call it a 'single' if only one unique sequence
-        my $grouping = @{ $count} == 2 ? 'single' : 'cluster';
+        if($number_of_sequences_in_cluster == 1){
+            $grouping = 'single';
+        }else{
+            $grouping = 'cluster';
+        };
 
         # Print header for each cluster/single
-        print {$fh_all_clusters} "####### $grouping $id ########\n";
+        print {$fh_all_clusters} "######## $grouping $new_id ########\n";
 
         # Use prescribed filehandle for each sequence, or create one
         my $fh;
-        if ( defined $fh_href->{$id} ) {
-            $fh = $fh_href->{$id};
+        if ( defined $fh_href->{$new_id} ) {
+            $fh = $fh_href->{$new_id};
         }
         else {
-            my $filename = $grouping . '_' . $id . '_top.fasta';
+            my $filename = $grouping . '_' . $new_id . '_top.fasta';
             open( $fh, '>', $filename );
             print "created output file '$filename'\n" if $VERBOSE;
         }
 
         # Write cluster info to the "all" and individual cluster files
-        write_cluster( [ $fh_all_clusters, $fh ], $count, $id, $max_top_seqs );
+        write_cluster(
+                {
+                    fh_all_clusters => $fh_all_clusters,
+                    fh              =>              $fh,
+                    cluster_aref    => $total_plus_cluster->{cluster},
+                    cluster_number  =>              $new_id,
+                    original_cluster_id  => $total_plus_cluster->{original_id},
+                    max_top_seqs    =>    $max_top_seqs,
+                    distance_href   =>   $distance_href,
+                }
+        );
 
         # Increment cluster id
-        $id++;
+        $new_id++;
     }
     return;
 }
 
 sub write_cluster {
-    my ( $fh_all_clusters, @fhs ) = @{ shift() };
-    my $cluster_aref   = shift;
-    my $cluster_number = shift;
-    my $max_top_seqs   = shift;
+    my $opt            = shift;
+
+    my $fh_all_clusters  = $opt->{fh_all_clusters};
+    my $fh               = $opt->{fh};
+    my $cluster_aref     = $opt->{cluster_aref};
+    my $distance_href    = $opt->{distance_href};
+    my $cluster_number   = $opt->{cluster_number};
+    my $max_top_seqs     = $opt->{max_top_seqs};
+    my $original_id      = $opt->{original_cluster_id};
+
     my @seq_w_counts   = @{$cluster_aref};
 
     # Remove total count, leaving just pairs with counts
-    my $total_count = shift @seq_w_counts;
-
     my $internal_seq_id = 1;
 
     my $is_single;
@@ -404,22 +452,20 @@ sub write_cluster {
     for my $seq_w_count (@seq_w_counts) {
         my ( $seq, $count ) = @{$seq_w_count};
 
-        my $unique_id = join( '.', $cluster_number, $internal_seq_id, $count );
+        my $distance = $distance_href->{$original_id}{$seq};
+
+        my $unique_id = join( '.', $cluster_number, $internal_seq_id, $count, $distance );
 
         # Print to individual cluster file and all clusters file
-        print {$fh_all_clusters} $unique_id . $SPACE x 10 . $seq . "\n";
+        print {$fh_all_clusters} "$unique_id\t$seq\n";
 
-      PRINT_LOOP:
-        for my $fh (@fhs) {
+        print {$fh} ">$unique_id\n$seq\n";
+
+        # Print second copy if this is a singleton (to make
+        #   multi-sequence alignment behave well)
+        if ($is_single) {
+            $unique_id .= 'b';
             print {$fh} ">$unique_id\n$seq\n";
-
-            # Print second copy if this is a singleton (to make
-            #   multi-sequence alignment behave well)
-            if ($is_single) {
-                $unique_id .= 'b';
-                $is_single = $FALSE;
-                redo PRINT_LOOP;
-            }
         }
         $internal_seq_id++;
     }
@@ -431,7 +477,9 @@ sub write_cluster {
         open( my $overage_fh, '>', $filename );
         for my $seq_w_count (@overage_seqs) {
             my ( $seq, $count ) = @{$seq_w_count};
-            my $unique_id = join( '.', $cluster_number, $internal_seq_id, $count );
+
+            my $distance = $distance_href->{$original_id}{$seq};
+            my $unique_id = join( '.', $cluster_number, $internal_seq_id, $count, $distance );
             print {$overage_fh} ">$unique_id\n$seq\n";
             print {$fh_all_clusters} "$unique_id\t$seq\n";
             $internal_seq_id++;
@@ -441,7 +489,7 @@ sub write_cluster {
     return;
 }
 
-sub matching_cluster {
+sub matching_cluster_and_distance {
     my $max_distance = shift;
     my $cluster_href = shift;
     my $seq_aref     = shift;
@@ -450,9 +498,11 @@ sub matching_cluster {
     for my $id ( keys %{$cluster_href} ) {
         my $cluster_seq = $cluster_href->{$id}->[0];
 
+        my $distance = distance( $seq_aref->[0], $cluster_seq->[0] );
+
         # Short circuit ID_LOOP when one is found (supposedly only one will match)
-        if ( distance( $seq_aref->[0], $cluster_seq->[0] ) < $max_distance ) {
-            return $id;
+        if ( $distance < $max_distance ) {
+            return ($id, $distance);
         }
     }
     return;
@@ -461,19 +511,32 @@ sub matching_cluster {
 sub get_sequences_from {
     my $fh   = shift || croak 'fh required';
     my $type = shift || confess 'file type required';
-    my %seq_count;
-    my $next_line = _next_sequence_for($fh, $type);
+    my %count_of;
+    my $next_seq = _next_sequence_for($fh, $type);
     while (1) {
-        my $seq = $next_line->();
-        last unless defined $seq;
+        my $seq = $next_seq->();
+        last if ! defined $seq;
         next if $seq eq $EMPTY_STRING;
-        $seq_count{ $seq }++;
+
+        # If sequence has not been seen before, start counting it. Otherwise, add to the count.
+        if( ! exists $count_of{$seq} ){
+            $count_of{$seq} = 1;
+        }else {
+            $count_of{$seq} = $count_of{$seq} + 1;
+        }
     }
 
-    my @sequences = map { [ $_, $seq_count{$_} ] } keys %seq_count;
-    @sequences = sort { $b->[1] <=> $a->[1] } @sequences;
+    # Convert hash into an array containing paired values.
+    #                       First value in the pair is the sequence.
+    #                       |   The second value in the pair is the number of times (the
+    #                       |   |  count) that that sequence is seen in the file.
+    #                       v   v
+    my @sequences = map { [ $_, $count_of{$_} ] } keys %count_of;
 
-    return \@sequences;
+    # Sort the sequences so that the most abundant occur first in the array.
+    @sequences    = sort { $b->[1] <=> $a->[1] } @sequences;
+
+    return @sequences;
 }
 
 sub _next_sequence_for {
@@ -603,6 +666,13 @@ END
     files. The batch script used to process each batch will be located in the
     respective batch directory.  To produce the scripts without running them,
     simply exclude the --run flag from the command line.
+
+    The output file contains names that contain four period delimited values
+      For example, 2.3.1.5 means
+          that this is the second cluster
+          this is the third sequence in the cluster
+          there is one copy of this sequences
+          it is an edit distance of 5 from the reference sequence
 
 =head1 CONFIGURATION AND ENVIRONMENT
 
@@ -784,6 +854,9 @@ END
 
 =head1 RELATED PUBLICATIONS
 
-    Ditzler MA, Lange MJ, Bose D, Bottoms CA, Virkler KF, et al. (2013) High-throughput sequence analysis reveals structural diversity and improved potency among RNA inhibitors of HIV reverse transcriptase. Nucleic Acids Res 41: 1873–1884. doi: 10.1093/nar/gks1190
+    Ditzler MA, Lange MJ, Bose D, Bottoms CA, Virkler KF, et al. (2013) High-
+    throughput sequence analysis reveals structural diversity and improved
+    potency among RNA inhibitors of HIV reverse transcriptase. Nucleic Acids
+    Res 41: 1873–1884. doi: 10.1093/nar/gks1190
 
 =cut

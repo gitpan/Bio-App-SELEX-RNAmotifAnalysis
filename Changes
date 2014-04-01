@@ -1,3 +1,5 @@
+0.0089 Fixed formatting of publication reference
+
 0.0088 Fixed bug in output of cluster file (clusters.txt)
 
 0.0085 Documented incompatibilities with Windows, BSD, Sun/Solaris, and SGI.

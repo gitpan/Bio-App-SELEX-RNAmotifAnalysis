@@ -28,38 +28,39 @@ use autodie;    # Automatically throw fatal exceptions for common unrecoverable
 sub test_get_sequences_from {
     my $fh            = shift;
     my $expected_aref = shift;
-    my $result_aref   = Bio::App::SELEX::RNAmotifAnalysis::get_sequences_from($fh, 'simple');
-    is_deeply( $result_aref, $expected_aref, 'sequences correctly extracted' );
+    my @result = Bio::App::SELEX::RNAmotifAnalysis::get_sequences_from($fh, 'simple');
+    is_deeply( \@result, $expected_aref, 'sequences correctly extracted' );
 }
 
 {   #Test 2
     my $expected_cluster    = 3;
     my $sample_cluster_href = sample_cluster();
     my $seq                 = [ 'ponmlkjihgfedcbd', 'X' ];
-    my $result_cluster =
-      Bio::App::SELEX::RNAmotifAnalysis::matching_cluster( 5, $sample_cluster_href, $seq,
+    my ($result_cluster, $result_distance) =
+      Bio::App::SELEX::RNAmotifAnalysis::matching_cluster_and_distance( 5, $sample_cluster_href, $seq,
         5 );
     is( $result_cluster, $expected_cluster,
         'found correct cluster for ' . $seq->[1] );
 }
 
 {   #Test 3
-    my $expected_cluster_href = sample_cluster();
-    my $input_fh              = fh_from('input');
-    my $result_cluster_href   = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+    my $expected_cluster_href  = sample_cluster();
+    my $expected_distance_href = distance_sample_cluster();
+    my $input_fh               = fh_from('input');
+    my ($result_cluster_href, $distance_cluster_href)   = Bio::App::SELEX::RNAmotifAnalysis::cluster(
         max_distance => 5,
         fh           => $input_fh,
         max_clusters => 5,
         file_type    => 'simple',
     );
 
-    is_deeply( $result_cluster_href, $expected_cluster_href,
-        'clusters correctly determined' );
+    is_deeply( $result_cluster_href, $expected_cluster_href, 'clusters correctly determined' );
+    is_deeply( $distance_cluster_href, $expected_distance_href, 'distance cluster correctly determined' );
 }
 
 {   #Test 4
     my $input_fh            = fh_from('input');
-    my $result_cluster_href = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+    my ($result_cluster_href, $distance_cluster_href) = Bio::App::SELEX::RNAmotifAnalysis::cluster(
         max_distance => 5,
         fh           => $input_fh,
         max_clusters => 2,
@@ -74,7 +75,7 @@ sub test_get_sequences_from {
 {   #Test 5
     my $input_fh            = fh_from('odd');
     my $seed_fh             = fh_from('seed');
-    my $result_cluster_href = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+    my ($result_cluster_href, $distance_cluster_href) = Bio::App::SELEX::RNAmotifAnalysis::cluster(
         max_distance => 5,
         fh           => $input_fh,
         seed_fh      => $seed_fh,
@@ -86,10 +87,11 @@ sub test_get_sequences_from {
         'explicit seed clusters works!' );
 }
 
+# Get test 5 to work first, then try this one
 {   # Test 6: Changing seed can change outcome (compare to Test 5 results)
     my $input_fh            = fh_from('seed');
     my $seed_fh             = fh_from('odd');
-    my $result_cluster_href = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+    my ($result_cluster_href, $distance_cluster_href) = Bio::App::SELEX::RNAmotifAnalysis::cluster(
         max_distance => 5,
         fh           => $input_fh,
         seed_fh      => $seed_fh,
@@ -100,6 +102,7 @@ sub test_get_sequences_from {
     is_deeply( $result_cluster_href, $expected_cluster_href,
         'Different seed clusters works!' );
 }
+
 
 sub sample_cluster1 {
     return {
@@ -123,6 +126,23 @@ sub sample_cluster {
         ],
     };
 }
+
+sub distance_sample_cluster
+{
+    return {
+        1 => {
+             abcdefghijklmnop   => 0,
+             abcdeghijklmnop    => 1,
+             abcddefghijklmnopp => 2,
+        },
+        2 => {  erwoprhasdfasfd => 0, },
+        3 => {  ponmlkjihgfdcba  => 0,
+                ponmlkjihgfedcba => 1,
+                ponmlkjihgfedcbb => 2,
+            },
+    };
+}
+
 
 sub expected_odd_cluster {
     return {
@@ -154,25 +174,35 @@ sub expected_odd_as_seed_cluster {
     my $cluster3_string;
     open( my $fh3, '>', \$cluster3_string );
 
-    my $cluster_href = sample_cluster();
     my $fh_href      = {
         1 => $fh1,
         2 => $fh2,
         3 => $fh3,
     };
 
+    my $input_fh               = fh_from('input');
+    my ($cluster_href, $distance_href)   = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+        max_distance => 5,
+        fh           => $input_fh,
+        max_clusters => 5,
+        file_type    => 'simple',
+    );
+
     Bio::App::SELEX::RNAmotifAnalysis::write_out_clusters(
-        cluster_href => $cluster_href,
-        fh_all_clusters       => $fh_all,
-        fh_href      => $fh_href,
-        max_top_seqs => 1000
+        distance_href    => $distance_href,
+        cluster_href     => $cluster_href,
+        fh_all_clusters  => $fh_all,
+        fh_href          => $fh_href,
+        max_top_seqs     => 1000
     );
     my $expected_cluster1 = string_from('cluster1');
     my $expected_cluster2 = string_from('cluster2');
     my $expected_cluster3 = string_from('cluster3');
+    my $expected_all_clusters = string_from('all_clusters');
     is_string( $cluster1_string, $expected_cluster1, 'cluster1 good' );
     is_string( $cluster2_string, $expected_cluster2, 'cluster2 good' );
     is_string( $cluster3_string, $expected_cluster3, 'cluster3 good' );
+    is( $all_cluster_string, $expected_all_clusters, 'all clusters file good' );
 }
 
 {    # Test 7: Maximum top sequences
@@ -190,20 +220,27 @@ sub expected_odd_as_seed_cluster {
 
     open( my $fh3, '>', \$string_for{3} );
 
-    my $cluster_href = sample_cluster();
     my $fh_href      = {
         1 => $fh1,
         2 => $fh2,
         3 => $fh3,
     };
 
-    my $input_fh = fh_from('input');
+    my $input_fh               = fh_from('input');
+    my ($cluster_href, $distance_href)   = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+        max_distance => 5,
+        fh           => $input_fh,
+        max_clusters => 5,
+        file_type    => 'simple',
+    );
+
 
     Bio::App::SELEX::RNAmotifAnalysis::write_out_clusters(
-        cluster_href => $cluster_href,
-        fh_all_clusters       => $fh_all,
-        fh_href      => $fh_href,
-        max_top_seqs => 2
+        distance_href    => $distance_href,
+        cluster_href    => $cluster_href,
+        fh_all_clusters => $fh_all,
+        fh_href         => $fh_href,
+        max_top_seqs    => 2
     );
 
     for my $cluster ( 1 .. 2 ) {
@@ -219,24 +256,33 @@ sub expected_odd_as_seed_cluster {
     }
 }
 
+
 {    # Test
     open( my $fh_all, '>', \my $all_cluster_string );
     open( my $fh1,    '>', \my $cluster1_string );
     open( my $fh2,    '>', \my $cluster2_string );
     open( my $fh3,    '>', \my $cluster3_string );
 
-    my $cluster_href = sample_cluster();
     my $fh_href      = {
         1 => $fh1,
         2 => $fh2,
         3 => $fh3,
     };
 
+    my $input_fh               = fh_from('input');
+    my ($cluster_href, $distance_href)   = Bio::App::SELEX::RNAmotifAnalysis::cluster(
+        max_distance => 5,
+        fh           => $input_fh,
+        max_clusters => 5,
+        file_type    => 'simple',
+    );
+
     Bio::App::SELEX::RNAmotifAnalysis::write_out_clusters(
-        cluster_href => $cluster_href,
-        fh_all_clusters       => $fh_all,
-        fh_href      => $fh_href,
-        max_top_seqs => 1000
+        distance_href    => $distance_href,
+        cluster_href    => $cluster_href,
+        fh_all_clusters => $fh_all,
+        fh_href         => $fh_href,
+        max_top_seqs    => 1000
     );
     my $expected_cluster1 = string_from('cluster1');
     my $expected_cluster2 = string_from('cluster2');
@@ -305,24 +351,31 @@ ponmlkjihgfdcba
 ponmlkjihgfdcba
 erwoprhasdfasfd
 erwoprhasdfasfd
-__[ cluster1 ]__
->1.1.3
+__[ cluster1_new ]__
+>1.1.3.0
 abcdefghijklmnop
->1.2.1
+>1.2.1.1
 abcdeghijklmnop
->1.3.1
+>1.3.1.2
+abcddefghijklmnopp
+__[ cluster1 ]__
+>1.1.3.0
+abcdefghijklmnop
+>1.2.1.1
+abcdeghijklmnop
+>1.3.1.2
 abcddefghijklmnopp
 __[ cluster2 ]__
->2.1.2
+>2.1.2.0
 ponmlkjihgfdcba
->2.2.1
+>2.2.1.1
 ponmlkjihgfedcba
->2.3.1
+>2.3.1.2
 ponmlkjihgfedcbb
 __[ cluster3 ]__
->3.1.2
+>3.1.2.0
 erwoprhasdfasfd
->3.1.2b
+>3.1.2.0b
 erwoprhasdfasfd
 __[ seed ]__
 ABCDEFGHIJKLMNO
@@ -330,32 +383,43 @@ __[ odd ]__
 BBCDEFGHIJKLMBB
 ABCDBBBBIJKLMNO
 __[ odd_cluster ]__
->1.1.1
+>1.1.1.0
 ABCDBBBBIJKLMNO
->1.2.1
+>1.2.1.4
 ABCDEFGHIJKLMNO
->1.3.1
+>1.3.1.3
 BBCDEFGHIJKLMBB
 __[ seeded_cluster1 ]__
->1.1.1
+>1.1.1.0
 abcdeghijklmnop
->1.2.3
+>1.2.3.1
 abcdefghijklmnop
->1.3.1
+>1.3.1.2
 abcddefghijklmnopp
 __[ fasta_top_cluster_1 ]__
->1.1.3
+>1.1.3.0
 abcdefghijklmnop
->1.2.1
+>1.2.1.1
 abcdeghijklmnop
 __[ fasta_overage_cluster_1 ]__
->1.3.1
+>1.3.1.2
 abcddefghijklmnopp
 __[ fasta_top_cluster_2 ]__
->2.1.2
+>2.1.2.0
 ponmlkjihgfdcba
->2.2.1
+>2.2.1.1
 ponmlkjihgfedcba
 __[ fasta_overage_cluster_2 ]__
->2.3.1
+>2.3.1.2
 ponmlkjihgfedcbb
+__[ all_clusters ]__
+######## cluster 1 ########
+1.1.3.0	abcdefghijklmnop
+1.2.1.1	abcdeghijklmnop
+1.3.1.2	abcddefghijklmnopp
+######## cluster 2 ########
+2.1.2.0	ponmlkjihgfdcba
+2.2.1.1	ponmlkjihgfedcba
+2.3.1.2	ponmlkjihgfedcbb
+######## single 3 ########
+3.1.2.0	erwoprhasdfasfd
