@@ -1,3 +1,5 @@
+0.0092 Added back dependency on Getopt::Long::Descriptive (Sorry, I didn't notice it was being used by a sub-module).
+
 0.0091 Updated Changes file
 
 0.0090 New Feature: Sequence identifier now has edit distance from cluster reference sequence included as a fourth number in the identifier (e.g. for the identifier 2.3.1.5, the corresponding sequence has an edit distance of 5 from the reference sequence). 
