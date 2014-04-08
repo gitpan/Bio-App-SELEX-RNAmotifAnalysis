@@ -1,3 +1,5 @@
+0.0093 Explicitly added NAME section in POD (thanks NeilB!). Also, I previously forgot to mention that the shebang lines in the tests were all changed to "#!/bin/env perl" to hopefully fix accidental use of the system perl by the tests (Thanks ANDK!). 
+
 0.0092 Added back dependency on Getopt::Long::Descriptive (Sorry, I didn't notice it was being used by a sub-module).
 
 0.0091 Updated Changes file

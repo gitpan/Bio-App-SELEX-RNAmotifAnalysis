@@ -22,4 +22,4 @@ requires:
   List::MoreUtils: 0
   Text::LevenshteinXS: 0.03
   autodie: 2.0
-version: 0.0092
+version: 0.0093

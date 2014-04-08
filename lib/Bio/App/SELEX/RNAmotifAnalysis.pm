@@ -623,6 +623,10 @@ END
 
 =pod
 
+=head1 NAME
+
+    Bio::App::SELEX::RNAmotifAnalysis - Cluster SELEX sequences and calculate their structures
+
 =head1 SYNOPSIS
 
     RNAmotifAnalysis --fastq seqs.fq --cpus 4 --run

@@ -1,3 +1,7 @@
+NAME
+
+        Bio::App::SELEX::RNAmotifAnalysis - Cluster SELEX sequences and calculate their structures
+
 SYNOPSIS
 
         RNAmotifAnalysis --fastq seqs.fq --cpus 4 --run
