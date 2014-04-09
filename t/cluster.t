@@ -1,3 +1,4 @@
+#!/usr/bin/env perl
 use 5.008;                   # Require at least Perl version 5.10
 use strict;                  # Must declare all variables before using them
 use warnings;                # Emit helpful warnings

@@ -1,4 +1,4 @@
-#!/bin/env perl
+#!/usr/bin/env perl
 use 5.008;      # Require at least Perl version 5.08
 use strict;     # Must declare all variables before using them use warnings;   # Emit helpful warnings
 use autodie;    # Automatically throw fatal exceptions for common unrecoverable
@@ -48,7 +48,16 @@ my $DELETE_TEMP_FILES = 1;
 
 
 SKIP: {    # AUTHOR TESTS
-    skip 'AUTHOR TESTS', 54 unless $ENV{RUN_DEVELOPER_TESTS}  == 1;
+
+    my $developer_tests; 
+
+    if(defined $ENV{RUN_DEVELOPER_TESTS}){
+        $developer_tests = $ENV{RUN_DEVELOPER_TESTS};
+    }else{
+        $developer_tests = 0;
+    }
+
+    skip 'AUTHOR TESTS', 54 if ! $developer_tests;
     my $seq_file = filename_for('sequences');
     system("bin/RNAmotifAnalysis --simple $seq_file --run &> /dev/null");
     my $batch_num = 1;

@@ -126,44 +126,9 @@ INSTALLATION
                 mafft
                 RNAalifold
     
-        (2) Either (a) download and run our installer or (b) use a CPAN client
-            to install Bio::App::SELEX::RNAmotifAnalysis.
+        (2) Use a CPAN client to install Bio::App::SELEX::RNAmotifAnalysis.
     
-    
-            (a) Installation method: Use the installer. 
-    
-                  i. Download installer (and name it "installer")
-    
-                        curl -o installer -L http://ircf.rnet.missouri.edu:8000/share.attachment/200
-    
-    
-                 ii. Make it executable
-    
-                        chmod u+x installer
-    
-    
-                iii. Run it.
-    
-                        ./installer
-    
-                 iv. Delete it if everything installed okay.
-    
-                        rm installer
-    
-                NOTE: Our installer creates the directory 'perl5' inside your home
-                directory. This directory serves as the top directory for Perl
-                modules and executables installed at this time, including
-                dependencies of the installed modules. The installer also appends
-                commands to your .bashrc file to make the installed programs
-                runnable by default (i.e. it includes your local 'perl5/lib/perl5'
-                directory in the PERL5LIB environment variable and your local
-                'perl5/bin' directory in your PATH environment variable).
-    
-    
-            (b) Installation method: Use a CPAN client. Here we demonstrate
-                the use of cpanminus to install it to a local Perl module
-                directory. These instructions assume absolutely no experience
-                with cpanminus.
+            Here we demonstrate the use of cpanminus to install it to a local Perl module directory. These instructions assume absolutely no experience with cpanminus.
     
                   i. Download cpanminus
     
@@ -216,7 +181,7 @@ INSTALLATION
     
         Please contact the author if, after consulting this documentation and
         searching Google with error messages, you still encounter difficulties
-        during the installation process using one of these two methods.
+        during the installation process.
 
 INCOMPATIBILITIES
 
@@ -236,5 +201,5 @@ RELATED PUBLICATIONS
         Ditzler MA, Lange MJ, Bose D, Bottoms CA, Virkler KF, et al. (2013) High-
         throughput sequence analysis reveals structural diversity and improved
         potency among RNA inhibitors of HIV reverse transcriptase. Nucleic Acids
-        Res 41: 1873–1884. doi: 10.1093/nar/gks1190
+        Res 41(3):1873-1884. doi: 10.1093/nar/gks1190
 
