@@ -130,53 +130,58 @@ INSTALLATION
     
             Here we demonstrate the use of cpanminus to install it to a local Perl module directory. These instructions assume absolutely no experience with cpanminus.
     
-                  i. Download cpanminus
+                  1. Download cpanminus
     
                         curl -LOk http://xrl.us/cpanm
     
     
-                 ii. Make it executable
+                  2. Make it executable
     
                         chmod u+x cpanm
     
     
-                iii. Make a local perl5 directory (if it doesn't already exist)
+                  3. Make a local lib/perl5 directory (if it doesn't already exist)
     
-                        mkdir -p ~/perl5
+                        mkdir -p ~/lib/perl5
     
     
-                 iv. Add relevant directories to your PERL5LIB and PATH environment
+                  4. Add relevant directories to your PERL5LIB and PATH environment
                      variables by adding the following text to your ~/.bashrc
                      file:
     
     
                         # Set PERL5LIB if it doesn't already exist
-                        : ${PERL5LIB:=~/perl5/lib/perl5}
+                        : ${PERL5LIB:=~/lib/perl5}
     
                         # Prepend to PERL5LIB if directory not already found in PERL5LIB
                         if ! echo $PERL5LIB | egrep -q "(^|:)~/perl5/lib/perl5($|:)"; then
-                            export PERL5LIB=~/perl5/lib/perl5:$PERL5LIB;
+                            export PERL5LIB=~/lib/perl5:$PERL5LIB;
                         fi
     
                         # Prepend to PATH if directory not already found in PATH
                         if ! echo $PATH | egrep -q "(^|:)~/perl5/bin($|:)"; then
-                            export PATH=~/perl5/bin:$PATH;
+                            export PATH=~/bin:$PATH;
                         fi
     
     
-                  v. Update environment variables immediately
+                  5. Update environment variables immediately
     
                         source ~/.bashrc
     
     
-                 vi. Install Module::Build
+                  6. Install Module::Build
     
-                        ./cpanm -l ~/perl5 Module::Build
+                        ./cpanm Module::Build
     
     
-                vii. Install Bio::App::SELEX::RNAmotifAnalysis
+                  7. Install Text::LevenshteinXS (even if you already have it installed elsewhere)
     
-                        ./cpanm -l ~/perl5 Bio::App::SELEX::RNAmotifAnalysis
+                        ./cpanm Text::LevenshteinXS
+    
+    
+                  8. Install Bio::App::SELEX::RNAmotifAnalysis
+    
+                        ./cpanm Bio::App::SELEX::RNAmotifAnalysis
     
     
         Please contact the author if, after consulting this documentation and
